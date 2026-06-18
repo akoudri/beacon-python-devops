@@ -27,24 +27,13 @@ class ConfigError(Exception):
 class Target:
     """Une cible à surveiller : un nom logique et un point réseau."""
 
-    # TODO : déclarer les trois champs attendus — name (str), host (str), port (int).
-    ...
+    name : str
+    host : str
+    port : int
 
 
 def load_config(path: Path) -> list[Target]:
     """Charge et valide la configuration des cibles depuis un fichier YAML.
-
-    Étapes attendues :
-      1. Lire le fichier avec `pathlib` et un encodage explicite (`utf-8`).
-         Fichier absent (`FileNotFoundError`) -> lève une `ConfigError` claire.
-      2. Parser avec `yaml.safe_load` (jamais `yaml.load`).
-         YAML invalide (`yaml.YAMLError`) -> lève une `ConfigError`,
-         en chaînant l'exception d'origine (`raise ConfigError(...) from e`).
-      3. Valider la structure minimale : clé `targets` présente, liste non vide,
-         et chaque entrée possède les champs `name`, `host`, `port`.
-      4. Renvoyer la liste des `Target`.
-
-    Indice : `yaml.safe_load` d'un fichier vide renvoie `None`, pas `{}`.
 
     Args:
         path: chemin du fichier de configuration.
@@ -55,5 +44,31 @@ def load_config(path: Path) -> list[Target]:
     Raises:
         ConfigError: fichier absent, YAML invalide ou structure incorrecte.
     """
-    # TODO : implémenter les 4 étapes décrites ci-dessus.
-    raise NotImplementedError("Lab 1 : implémente load_config().")
+    try:
+        raw = path.read_text(encoding='utf-8')
+    except:
+        raise ConfigError(f"Fichier de configuration {path} introuvable")
+    
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError as e:
+        raise ConfigError(f"Fichier YAML {path} invalide")
+
+    if not isinstance(data, dict) or "targets" not in data:
+        raise ConfigError(f"Clef 'targets' absente ou fichier {path} vide")
+    
+    entries = data["targets"]
+    if not isinstance(entries, list) or not entries:
+        raise ConfigError("La liste des cibles doit être non vide")
+    
+    targets : list[Target] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ConfigError(f"Cible #{index + 1} : un mapping est attendu")
+        missing = [field for field in ("name", "host", "port") if field not in entry]
+        if missing:
+            raise ConfigError(f"Cible #{index + 1} - Champs manquants")
+        targets.append(
+            Target(name=entry["name"], host=entry["host"], port=entry["port"])
+        )
+    return targets
