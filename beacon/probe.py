@@ -33,16 +33,20 @@ def probe(target : Target, timeout: float = 2.0) -> ProbeResult:
         checked_at=datetime.now(timezone.utc).isoformat()
     )
 
-def probe_http(target: Target, client: httpx.Client | None = None) -> ProbeResult:
+def probe_http(
+        target: Target, 
+        client: httpx.Client | None = None,
+        headers: dict[str, str] | None = None
+    ) -> ProbeResult:
     if not target.url:
         raise ConfigError(f"La cibre {target.name} n'a pas d'url à sonder")
     timeout = target.timeout or DEFAULT_HTTP_TIMEOUT
     start = time.perf_counter()
     try:
         if client is not None:
-            response = client.get(target.url, timeout=timeout)
+            response = client.get(target.url, timeout=timeout, headers=headers)
         else:
-            response = httpx.get(target.url, timeout=timeout)
+            response = httpx.get(target.url, timeout=timeout, headers=headers)
         status = "up" if response.status_code < 400 else "down"
     except httpx.RequestError:
         status = "down"
