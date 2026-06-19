@@ -9,10 +9,10 @@ Lab 1 — squelette à compléter. Remplace les `TODO` et les `...` par ton code
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError
 
 
 class ConfigError(Exception):
@@ -23,35 +23,13 @@ class ConfigError(Exception):
     """
 
 
-class Target(BaseModel):
-    """Une cible à surveiller : un nom logique et un point réseau.
+@dataclass
+class Target:
+    """Une cible à surveiller : un nom logique et un point réseau."""
 
-    Pydantic se charge de valider la présence et le type de chaque champ ; le
-    port est en plus contraint à la plage TCP valide.
-    """
-
-    model_config = {"extra": "forbid"}
-
-    name: str
-    host: str
-    port: int = Field(ge=1, le=65535)
-
-
-class _ConfigFile(BaseModel):
-    """Structure attendue du fichier YAML : une clef `targets` non vide."""
-
-    model_config = {"extra": "forbid"}
-
-    targets: list[Target] = Field(min_length=1)
-
-
-def _format_errors(error: ValidationError) -> str:
-    """Transforme les erreurs Pydantic en un message lisible en français."""
-    details = []
-    for err in error.errors():
-        location = ".".join(str(part) for part in err["loc"]) or "(racine)"
-        details.append(f"{location} : {err['msg']}")
-    return " ; ".join(details)
+    name : str
+    host : str
+    port : int
 
 
 def load_config(path: Path) -> list[Target]:
@@ -67,18 +45,30 @@ def load_config(path: Path) -> list[Target]:
         ConfigError: fichier absent, YAML invalide ou structure incorrecte.
     """
     try:
-        raw = path.read_text(encoding="utf-8")
-    except OSError:
+        raw = path.read_text(encoding='utf-8')
+    except:
         raise ConfigError(f"Fichier de configuration {path} introuvable")
-
+    
     try:
         data = yaml.safe_load(raw)
-    except yaml.YAMLError:
+    except yaml.YAMLError as e:
         raise ConfigError(f"Fichier YAML {path} invalide")
 
-    try:
-        config = _ConfigFile.model_validate(data)
-    except ValidationError as error:
-        raise ConfigError(f"Configuration {path} invalide — {_format_errors(error)}")
-
-    return config.targets
+    if not isinstance(data, dict) or "targets" not in data:
+        raise ConfigError(f"Clef 'targets' absente ou fichier {path} vide")
+    
+    entries = data["targets"]
+    if not isinstance(entries, list) or not entries:
+        raise ConfigError("La liste des cibles doit être non vide")
+    
+    targets : list[Target] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ConfigError(f"Cible #{index + 1} : un mapping est attendu")
+        missing = [field for field in ("name", "host", "port") if field not in entry]
+        if missing:
+            raise ConfigError(f"Cible #{index + 1} - Champs manquants")
+        targets.append(
+            Target(name=entry["name"], host=entry["host"], port=entry["port"])
+        )
+    return targets
