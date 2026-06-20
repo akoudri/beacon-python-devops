@@ -1,0 +1,19 @@
+# Garder le contexte de build minimal et sans secret.
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+tests/
+labs/
+deploy/
+*.md
