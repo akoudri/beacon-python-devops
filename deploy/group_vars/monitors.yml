@@ -1,0 +1,13 @@
+---
+# Variables du groupe `monitors`. Externaliser ces valeurs (plutôt que de les
+# coder dans le playbook) permet de paramétrer chaque hôte par l'inventaire.
+
+# Racine d'installation de Beacon sur l'hôte cible.
+beacon_home: "{{ ansible_env.HOME }}/.local/share/beacon"
+
+# Emplacement standard du fichier de configuration des cibles.
+beacon_config_dir: "{{ beacon_home }}/config"
+
+# Planification de la sonde périodique (syntaxe cron).
+beacon_cron_minute: "*/5"
+beacon_cron_hour: "*"

@@ -1,0 +1,64 @@
+---
+# Déploiement et planification de Beacon sur les hôtes du groupe `monitors`.
+#
+# Principe : on décrit l'ÉTAT DÉSIRÉ de l'hôte (Beacon installé, config en
+# place, sonde planifiée), pas une procédure. Ansible converge, et un second
+# passage ne change rien — l'idempotence est la propriété à vérifier.
+#
+# Lancer :
+#     ansible-playbook -i inventory.ini playbook.yml
+# Rejouer (doit afficher changed=0) :
+#     ansible-playbook -i inventory.ini playbook.yml
+
+- name: Déployer Beacon sur les moniteurs
+  hosts: monitors
+  gather_facts: true
+
+  vars:
+    # Répertoire du projet (où se trouve le wheel construit). Par défaut, le
+    # dépôt parent de ce playbook.
+    beacon_src: "{{ playbook_dir }}/.."
+    beacon_wheel: "beacon-0.1.0-py3-none-any.whl"
+    beacon_venv: "{{ beacon_home }}/venv"
+
+  tasks:
+    - name: Créer l'arborescence de Beacon
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ beacon_home }}"
+        - "{{ beacon_config_dir }}"
+        - "{{ beacon_home }}/dist"
+
+    - name: Copier le paquet (wheel) sur l'hôte
+      ansible.builtin.copy:
+        src: "{{ beacon_src }}/dist/{{ beacon_wheel }}"
+        dest: "{{ beacon_home }}/dist/{{ beacon_wheel }}"
+        mode: "0644"
+
+    - name: Installer Beacon dans un venv dédié
+      ansible.builtin.pip:
+        # name + version => idempotent : pip ne réinstalle pas si déjà satisfait.
+        name: beacon
+        version: "0.1.0"
+        virtualenv: "{{ beacon_venv }}"
+        virtualenv_command: "python3 -m venv"
+        # find-links fournit le wheel local ; les dépendances viennent de PyPI.
+        extra_args: "--find-links {{ beacon_home }}/dist"
+
+    - name: Déposer la configuration des cibles
+      ansible.builtin.copy:
+        src: "{{ beacon_src }}/config/targets.yaml"
+        dest: "{{ beacon_config_dir }}/targets.yaml"
+        mode: "0644"
+
+    - name: Planifier la sonde périodique (cron)
+      ansible.builtin.cron:
+        name: "beacon check"
+        minute: "{{ beacon_cron_minute }}"
+        hour: "{{ beacon_cron_hour }}"
+        job: >-
+          {{ beacon_venv }}/bin/beacon check
+          --config {{ beacon_config_dir }}/targets.yaml
