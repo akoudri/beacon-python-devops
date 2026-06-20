@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Beacon en fonction serverless, déclenché périodiquement.
+  Le handler réutilise le cœur de Beacon (load_config + probe_all) ; seul le
+  point d'entrée change.
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: python3.12
+
+Resources:
+  BeaconFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: beacon.serverless.handler
+      MemorySize: 128
+      Environment:
+        Variables:
+          BEACON_CONFIG: /var/task/config/targets.yaml
+          # Le token est fourni par la configuration de la fonction (paramètre
+          # ou secret), jamais en dur dans le code.
+          # BEACON_TOKEN: '{{resolve:secretsmanager:beacon/token}}'
+      Events:
+        # Déclenchement périodique (toutes les 5 minutes), pas seulement manuel.
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
