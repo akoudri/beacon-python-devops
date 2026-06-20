@@ -1,12 +1,25 @@
+"""Interface en ligne de commande de Beacon.
+
+`cli.py` est mince : il traduit des arguments en appels au cœur (`config`,
+`probe`), choisit un format de sortie et un code de retour. Aucune logique de
+sonde ou de parsing ne vit ici.
+
+Convention de code de sortie :
+    0 — toutes les cibles sont `up`
+    1 — au moins une cible est `down`
+    2 — erreur de configuration ou d'usage
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from beacon.config import ConfigError, load_config
+from beacon.observability import configure_logging
 from beacon.probe import ProbeResult, probe_all
 
 EXIT_OK = 0
@@ -53,6 +66,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default="text",
         help="Format de sortie (défaut : text).",
     )
+    check.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Émettre les logs au format JSON (défaut : texte).",
+    )
     check.set_defaults(func=_cmd_check)
     return parser
 
@@ -61,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     """Point d'entrée. Renvoie le code de sortie (utilisé par le console_script)."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    configure_logging(json_format=getattr(args, "json_logs", False))
     try:
         return args.func(args)
     except ConfigError as e:

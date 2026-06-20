@@ -1,6 +1,7 @@
 """Tests de la sonde cloud sous moto : aucun appel AWS réel."""
 
 import boto3
+import pytest
 from moto import mock_aws
 
 from beacon.cloud import ResourceState, probe_cloud

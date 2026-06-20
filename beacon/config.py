@@ -25,8 +25,8 @@ class ConfigError(Exception):
 class Target:
     """Une cible à surveiller : un nom logique et un point réseau.
 
-    `url` et `timeout` sont optionnels : une cible dotée d'une `url` est sondée
-    en HTTP (`probe_http`), sinon en TCP (`probe`).
+    `host`/`port` servent la sonde TCP ; `url` (optionnelle) active la sonde
+    HTTP du Lab 5. `timeout` surcharge éventuellement le délai par défaut.
     """
 
     name: str
@@ -50,35 +50,40 @@ def load_config(path: Path) -> list[Target]:
     """
     try:
         raw = path.read_text(encoding="utf-8")
-    except OSError:
-        raise ConfigError(f"Fichier de configuration {path} introuvable")
+    except FileNotFoundError as e:
+        raise ConfigError(f"Fichier de configuration introuvable : {path}") from e
 
     try:
         data = yaml.safe_load(raw)
-    except yaml.YAMLError:
-        raise ConfigError(f"Fichier YAML {path} invalide")
+    except yaml.YAMLError as e:
+        raise ConfigError(f"YAML invalide dans {path} : {e}") from e
 
+    # Un fichier vide est parsé en `None`, pas en `{}`.
     if not isinstance(data, dict) or "targets" not in data:
-        raise ConfigError(f"Clef 'targets' absente ou fichier {path} vide")
+        raise ConfigError(f"Clé 'targets' absente ou fichier vide dans {path}.")
 
     entries = data["targets"]
     if not isinstance(entries, list) or not entries:
-        raise ConfigError("La liste des cibles doit être non vide")
+        raise ConfigError("'targets' doit être une liste non vide.")
 
     targets: list[Target] = []
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
-            raise ConfigError(f"Cible #{index + 1} : un mapping est attendu")
+            raise ConfigError(f"Cible #{index + 1} : un mapping est attendu.")
         missing = [field for field in ("name", "host", "port") if field not in entry]
         if missing:
-            raise ConfigError(f"Cible #{index + 1} - Champs manquants")
+            raise ConfigError(
+                f"Cible #{index + 1} : champ(s) manquant(s) : {', '.join(missing)}."
+            )
+        timeout = entry.get("timeout")
         targets.append(
             Target(
                 name=entry["name"],
                 host=entry["host"],
-                port=entry["port"],
+                port=int(entry["port"]),
                 url=entry.get("url"),
-                timeout=entry.get("timeout"),
+                timeout=float(timeout) if timeout is not None else None,
             )
         )
+
     return targets

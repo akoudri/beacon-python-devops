@@ -3,7 +3,10 @@ name = "beacon"
 version = "0.1.0"
 description = "Sonde de supervision légère (support de formation Python/DevOps)"
 requires-python = ">=3.12"
-dependencies = ["pyyaml", "pydantic>=2", "httpx", "boto3", "moto"]
+dependencies = ["pyyaml", "httpx", "boto3", "prometheus-client"]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "moto"]
 
 [project.scripts]
 beacon = "beacon.cli:main"
