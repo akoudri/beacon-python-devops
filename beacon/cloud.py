@@ -12,7 +12,7 @@ aucun secret à gérer.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from botocore.exceptions import ClientError
@@ -46,7 +46,7 @@ def probe_cloud(client: Any, resource_id: str) -> ResourceState:
     return ResourceState(
         resource_id=resource_id,
         state=state,
-        checked_at=datetime.now(timezone.utc).isoformat(),
+        checked_at=datetime.now(UTC).isoformat(),
     )
 
 

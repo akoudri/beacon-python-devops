@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import sys
 from pathlib import Path
 
@@ -56,7 +55,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    check = sub.add_parser("check", help="Sonde toutes les cibles et affiche leur état.")
+    check = sub.add_parser(
+        "check", help="Sonde toutes les cibles et affiche leur état."
+    )
     check.add_argument(
         "--config", default="config/targets.yaml", help="Chemin du fichier de cibles."
     )
@@ -81,7 +82,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     configure_logging(json_format=getattr(args, "json_logs", False))
     try:
-        return args.func(args)
+        exit_code: int = args.func(args)
+        return exit_code
     except ConfigError as e:
         print(f"Erreur de configuration : {e}", file=sys.stderr)
         return EXIT_CONFIG

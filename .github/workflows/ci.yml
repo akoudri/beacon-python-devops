@@ -1,0 +1,50 @@
+name: CI
+
+# Déclenché à chaque push et sur les pull requests.
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint · Types · Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Extension : matrice de versions Python exécutées en parallèle.
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Installer le projet (avec extras dev)
+        run: pip install -e ".[dev]"
+
+      # Ordonné du moins cher au plus cher : un échec précoce économise du temps.
+      # Ces commandes sont EXACTEMENT celles lançables en local.
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Types (mypy)
+        run: mypy beacon
+
+      - name: Tests (pytest)
+        run: pytest
+
+  image:
+    name: Build de l'image
+    runs-on: ubuntu-latest
+    # Extension : construire l'image seulement après le vert qualité.
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construire l'image Beacon
+        run: docker build -t beacon:${{ github.sha }} .

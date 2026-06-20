@@ -12,7 +12,7 @@ import logging
 import socket
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
@@ -51,7 +51,7 @@ def probe(target: Target, timeout: float = 2.0) -> ProbeResult:
         target=target.name,
         status=status,
         latency_ms=round(latency_ms, 2),
-        checked_at=datetime.now(timezone.utc).isoformat(),
+        checked_at=datetime.now(UTC).isoformat(),
     )
 
 
@@ -93,7 +93,7 @@ def probe_http(
         target=target.name,
         status=status,
         latency_ms=round(latency_ms, 2),
-        checked_at=datetime.now(timezone.utc).isoformat(),
+        checked_at=datetime.now(UTC).isoformat(),
     )
 
 
